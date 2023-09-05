@@ -1,4 +1,5 @@
 const { mat4 } = glMatrix;
+
 var vertextShaderText = [
   "precision mediump float;",
   "",
@@ -26,8 +27,6 @@ var fragmentShaderText = [
   "}",
 ].join("\n");
 
-
-
 const InitDemo = () => {
   console.log("This is working");
   var canvas = document.getElementById("surface");
@@ -42,20 +41,44 @@ const InitDemo = () => {
   canvas.height = window.innerHeight;
   gl.viewport(0, 0, window.innerWidth, window.innerHeight);
 
-  // USER INPUT
-  // -1 <= (x, y) <= 1
-  let userInputXYValue = {
-    x: 0,
-    y: 0,
-  }
+  // USER INPUT // 
+  let clicking = false;
+  let zoom = 0
+  let t_x = 0
+  let t_y = 0
+  const sensitivity = 3;
   const handleMouseMove = (e) => {
-    userInputXYValue.x = e.clientX / canvas.width
-    userInputXYValue.y = e.clientY / canvas.height 
+    if (clicking) {
+      t_x -= (e.movementX / canvas.width) * sensitivity;
+      t_y -= (e.movementY / canvas.height) * sensitivity;
+    }
+  };
+  const handleMouseDown = (e) => {
+    clicking = true;
+  };
+  const handleMouseUp = (e) => {
+    clicking = false;
+  };
+  const handleKeyDown = (e) => {
+    switch (e.key){
+      case ('.'):
+        zoom -= 1
+        break
+      case (','):
+        zoom += 1
+        break
+      default:
+        break;
+    }
+    console.log(e)
   }
-  canvas.addEventListener('mousemove', 
-    handleMouseMove
-  ) 
 
+  canvas.addEventListener("mousemove", handleMouseMove);
+  canvas.addEventListener("mouseup", handleMouseUp);
+  canvas.addEventListener("mousedown", handleMouseDown);
+  document.addEventListener("keydown", handleKeyDown)
+
+  //////////////
 
   gl.clearColor(0.75, 0.85, 0.8, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT, gl | gl.DEPTH_BUFFER_BIT);
@@ -222,13 +245,31 @@ const InitDemo = () => {
   // main loop
   gl.useProgram(program);
 
-  var angle = 0;
-  const loop = () => {
-    angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
-    mat4.rotate(yRotationMatrix, identityMatrix, angle * userInputXYValue.x, [0, 1, 0]);
-    mat4.rotate(xRotationMatrix, identityMatrix, angle * userInputXYValue.y, [1, 0, 0]);
+  const update_worldMatrix = () => {
+    mat4.rotate(
+      yRotationMatrix,
+      identityMatrix,
+      t_x,
+      [0, 1, 0]
+    );
+    mat4.rotate(
+      xRotationMatrix,
+      identityMatrix,
+      t_y,
+      [1, 0, 0]
+    );
     mat4.mul(worldMatrix, xRotationMatrix, yRotationMatrix);
+  }
+
+  const update_viewMatrix = () => {
+    mat4.lookAt(viewMatrix, [0, 0, -7 + zoom], [0, 0, 0], [0, 1, 0]);
+  }
+
+  const loop = () => {
+    update_worldMatrix();
+    update_viewMatrix();
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
+    gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
 
     gl.clearColor(0.75, 0.85, 0.8, 1.0);
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
