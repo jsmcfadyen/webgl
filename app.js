@@ -70,7 +70,6 @@ const InitDemo = () => {
       default:
         break;
     }
-    console.log(e)
   }
 
   canvas.addEventListener("mousemove", handleMouseMove);
